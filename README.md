@@ -1,27 +1,9 @@
-# Telegram Bot
+# បក្សីកីឡា-24 Telegram Bot
 
-A feature-rich Telegram bot designed for 24/7 operation with active hours management.
+Simple Telegram bot for បក្សីកីឡា-24 — deployed on Railway via GitHub.
 
-## Features
-
-- 🕐 Active hours management (9 AM - 10 PM)
-- 💬 Automatic message responses
-- 🎯 Inline keyboard buttons
-- 📊 User tracking
-- 🚀 Railway deployment ready
-
-## Setup
-
-### Prerequisites
-
-- Python 3.11+
-- Telegram Bot Token (from [@BotFather](https://t.me/botfather))
-- Railway account
-- GitHub account
-
-### Local Development
-
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/telegram-bot.git
-cd telegram-bot
+## Deploy
+1. Push this repo to GitHub
+2. Create new project on Railway → Deploy from GitHub
+3. Add environment variables (BOT_TOKEN, CHANNEL_URL, SUPPORT_URL)
+4. Railway auto-builds and runs via Procfile
