@@ -1,244 +1,139 @@
 import os
 import logging
-from datetime import datetime, time
-import pytz
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
     CommandHandler,
     MessageHandler,
-    filters,
+    CallbackQueryHandler,
     ContextTypes,
-    CallbackQueryHandler
+    filters,
 )
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# ---------- CONFIG ----------
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+CHANNEL_URL = os.environ.get("CHANNEL_URL", "https://t.me/yourchannel")
+SUPPORT_URL = os.environ.get("SUPPORT_URL", "https://t.me/yoursupport")
 
-# Enable logging
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
 
-# Bot configuration
-BOT_TOKEN = os.getenv('BOT_TOKEN')
-ADMIN_ID = os.getenv('ADMIN_ID')  # Your Telegram user ID
-TIMEZONE = pytz.timezone('UTC')  # Change to your timezone
+# ---------- TEXT ----------
+WELCOME = (
+    "🎉 សូមស្វាគមន៍មកកាន់ *បក្សីកីឡា-24* 🎉\n\n"
+    "✅ ព័ត៌មានកីឡា និងលទ្ធផលផ្ទាល់\n"
+    "✅ វិភាគ និងទស្សន៍ទាយ\n"
+    "✅ ភ្ជាប់ជាមួយសហគមន៍យើង\n\n"
+    "សូមជ្រើសរើសជម្រើសខាងក្រោម 👇"
+)
 
-# Store user data (in production, use a database)
-user_data = {}
+HELP_TEXT = (
+    "📖 *របៀបប្រើប្រាស់*\n\n"
+    "/start - ចាប់ផ្តើម\n"
+    "/help - ជំនួយ\n"
+    "/about - អំពីយើង\n"
+    "/contact - ទំនាក់ទំនង\n"
+    "/channel - ឆានែលផ្លូវការ"
+)
 
-# Active hours configuration (24-hour format)
-ACTIVE_START = time(9, 0)  # 9:00 AM
-ACTIVE_END = time(22, 0)   # 10:00 PM
+ABOUT_TEXT = (
+    "🏆 *បក្សីកីឡា-24*\n\n"
+    "យើងផ្តល់ព័ត៌មានកីឡាដែលអាចទុកចិត្តបាន 24/7\n"
+    "ទាំងកីឡាបាល់ទាត់ បាល់បោះ និងច្រើនទៀត។\n\n"
+    "សូមអរគុណសម្រាប់ការគាំទ្រ! 🙏"
+)
 
-def is_active_hours():
-    """Check if current time is within active hours"""
-    current_time = datetime.now(TIMEZONE).time()
-    return ACTIVE_START <= current_time <= ACTIVE_END
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle /start command"""
-    user = update.effective_user
-    user_id = user.id
-    
-    # Store user data
-    if user_id not in user_data:
-        user_data[user_id] = {
-            'first_name': user.first_name,
-            'username': user.username,
-            'joined': datetime.now(TIMEZONE).isoformat(),
-            'messages': 0
-        }
-    
-    welcome_message = f"""
-👋 Hello {user.first_name}!
-
-Welcome to our bot! I'm here to help you 24/7.
-
-🎯 **What I can do:**
-• Respond to your messages
-• Provide information
-• Help with queries
-
-📊 **Bot Status:** {'🟢 Active' if is_active_hours() else '🟡 Away Mode'}
-
-Type /help to see all commands!
-    """
-    
+# ---------- KEYBOARDS ----------
+def main_menu() -> InlineKeyboardMarkup:
     keyboard = [
-        [InlineKeyboardButton("📚 Help", callback_data='help')],
-        [InlineKeyboardButton("ℹ️ About", callback_data='about')],
-        [InlineKeyboardButton("📞 Contact", callback_data='contact')]
+        [InlineKeyboardButton("📢 ឆានែលផ្លូវការ", url=CHANNEL_URL)],
+        [InlineKeyboardButton("💬 ទំនាក់ទំនង", url=SUPPORT_URL)],
+        [InlineKeyboardButton("ℹ️ អំពីយើង", callback_data="about")],
+        [InlineKeyboardButton("📖 ជំនួយ", callback_data="help")],
     ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
+    return InlineKeyboardMarkup(keyboard)
+
+
+# ---------- HANDLERS ----------
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    name = user.first_name if user else "អ្នកប្រើ"
+    text = f"សូមស្វាគមន៍ *{name}*!\n\n" + WELCOME
     await update.message.reply_text(
-        welcome_message,
-        reply_markup=reply_markup,
-        parse_mode='Markdown'
+        text, parse_mode="Markdown", reply_markup=main_menu()
     )
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle /help command"""
-    help_text = """
-🤖 **Available Commands:**
 
-/start - Start the bot
-/help - Show this help message
-/about - About this bot
-/status - Check bot status
-/contact - Contact information
+async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(
+        HELP_TEXT, parse_mode="Markdown", reply_markup=main_menu()
+    )
 
-💬 **Just send me a message and I'll respond!**
-    """
-    await update.message.reply_text(help_text, parse_mode='Markdown')
 
-async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle /about command"""
-    about_text = """
-ℹ️ **About This Bot**
+async def about_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(
+        ABOUT_TEXT, parse_mode="Markdown", reply_markup=main_menu()
+    )
 
-This bot is designed to help you with various tasks.
-Built with Python and python-telegram-bot library.
 
-🚀 **Features:**
-• 24/7 Availability
-• Fast Response Time
-• User-Friendly Interface
+async def contact_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(
+        "💬 សូមទំនាក់ទំនងតាមរយៈ៖ " + SUPPORT_URL,
+        disable_web_page_preview=True,
+    )
 
-Version: 1.0.0
-    """
-    await update.message.reply_text(about_text, parse_mode='Markdown')
 
-async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle /status command"""
-    current_time = datetime.now(TIMEZONE).strftime("%Y-%m-%d %H:%M:%S")
-    
-    status_text = f"""
-📊 **Bot Status**
+async def channel_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(
+        "📢 ចូលរួមឆានែលផ្លូវការរបស់យើង៖ " + CHANNEL_URL,
+        disable_web_page_preview=True,
+    )
 
-🕐 Current Time: {current_time}
-📍 Timezone: {TIMEZONE}
-{'🟢 Status: Active' if is_active_hours() else '🟡 Status: Away Mode'}
 
-⏰ Active Hours: {ACTIVE_START.strftime('%H:%M')} - {ACTIVE_END.strftime('%H:%M')}
-    """
-    
-    await update.message.reply_text(status_text, parse_mode='Markdown')
-
-async def contact_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle /contact command"""
-    contact_text = """
-📞 **Contact Information**
-
-For support or inquiries:
-• Email: support@example.com
-• Telegram: @your_username
-
-We typically respond within 24 hours.
-    """
-    await update.message.reply_text(contact_text, parse_mode='Markdown')
-
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle regular text messages"""
-    user_id = update.effective_user.id
-    message_text = update.message.text.lower()
-    
-    # Update user message count
-    if user_id in user_data:
-        user_data[user_id]['messages'] += 1
-    
-    # Check if within active hours
-    if not is_active_hours():
-        response = """
-🌙 **Away Mode**
-
-Thank you for your message! Our bot is currently in away mode.
-
-We'll be back online during active hours:
-⏰ 9:00 AM - 10:00 PM (UTC)
-
-Your message has been recorded and we'll respond as soon as possible!
-        """
-        await update.message.reply_text(response, parse_mode='Markdown')
-        return
-    
-    # Smart responses based on keywords
-    if any(word in message_text for word in ['hello', 'hi', 'hey']):
-        response = f"Hello {update.effective_user.first_name}! 👋 How can I help you today?"
-    elif any(word in message_text for word in ['price', 'cost', 'pricing']):
-        response = "💰 For pricing information, please contact our sales team at @your_username"
-    elif any(word in message_text for word in ['help', 'support']):
-        response = "🆘 I'm here to help! Please describe your issue and I'll assist you."
-    elif any(word in message_text for word in ['thank', 'thanks']):
-        response = "You're welcome! 😊 Is there anything else I can help you with?"
-    else:
-        response = """
-I received your message! 📝
-
-Our team will review it and get back to you soon.
-
-In the meantime, you can:
-• Type /help for commands
-• Type /status to check bot status
-• Type /contact for contact info
-        """
-    
-    await update.message.reply_text(response, parse_mode='Markdown')
-
-async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle button callbacks"""
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()
-    
-    if query.data == 'help':
+    if query.data == "about":
         await query.edit_message_text(
-            text="📚 Need help? Type /help to see all available commands!",
-            parse_mode='Markdown'
+            ABOUT_TEXT, parse_mode="Markdown", reply_markup=main_menu()
         )
-    elif query.data == 'about':
+    elif query.data == "help":
         await query.edit_message_text(
-            text="ℹ️ This is a multifunctional Telegram bot designed to assist you 24/7!",
-            parse_mode='Markdown'
-        )
-    elif query.data == 'contact':
-        await query.edit_message_text(
-            text="📞 Contact us at: support@example.com or @your_username",
-            parse_mode='Markdown'
+            HELP_TEXT, parse_mode="Markdown", reply_markup=main_menu()
         )
 
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Log errors"""
-    logger.warning(f'Update {update} caused error {context.error}')
 
-def main():
-    """Start the bot"""
-    # Create the Application
-    application = Application.builder().token(BOT_TOKEN).build()
-    
-    # Add command handlers
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("about", about_command))
-    application.add_handler(CommandHandler("status", status_command))
-    application.add_handler(CommandHandler("contact", contact_command))
-    
-    # Add message handler
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    
-    # Add callback query handler
-    application.add_handler(CallbackQueryHandler(button_callback))
-    
-    # Add error handler
-    application.add_error_handler(error_handler)
-    
-    # Start the bot
-    logger.info("Starting bot...")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Reply friendly to any unknown text."""
+    await update.message.reply_text(
+        "🙏 សូមអរគុណសម្រាប់សារ!\n"
+        "សូមជ្រើសរើសពីម៉ឺនុយ ឬវាយ /start ដើម្បីចាប់ផ្តើម។",
+        reply_markup=main_menu(),
+    )
 
-if __name__ == '__main__':
+
+# ---------- MAIN ----------
+def main() -> None:
+    if not BOT_TOKEN:
+        raise SystemExit("❌ BOT_TOKEN not set in environment variables.")
+
+    app = Application.builder().token(BOT_TOKEN).build()
+
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("help", help_cmd))
+    app.add_handler(CommandHandler("about", about_cmd))
+    app.add_handler(CommandHandler("contact", contact_cmd))
+    app.add_handler(CommandHandler("channel", channel_cmd))
+    app.add_handler(CallbackQueryHandler(button_handler))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
+
+    logger.info("🤖 បក្សីកីឡា-24 bot is running...")
+    app.run_polling(allowed_updates=Update.ALL_TYPES)
+
+
+if __name__ == "__main__":
     main()
